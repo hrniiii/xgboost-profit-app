@@ -16,7 +16,19 @@ st.set_page_config(
 )
 
 # ======================================
-# BACKGROUND IMAGE FROM LOCAL
+# LOAD CUSTOM CSS (jika ada)
+# ======================================
+def local_css(file_name):
+    try:
+        with open(file_name) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except FileNotFoundError:
+        pass  # biarkan saja jika tidak ada
+
+local_css("style.css")
+
+# ======================================
+# BACKGROUND IMAGE FROM LOCAL (opsional)
 # ======================================
 if os.path.exists("background.jpeg"):
     def add_bg_from_local(image_file):
@@ -37,12 +49,18 @@ if os.path.exists("background.jpeg"):
         )
     add_bg_from_local("background.jpeg")
 
-# Tambahkan fitur frekuensi MenuItem jika diperlukan
+# ======================================
+# Tambahkan fungsi custom agar bisa load preprocessor dengan aman
+# ======================================
 def add_menuitem_freq(X_df):
-    menu_item_freq = joblib.load("menu_item_freq.pkl")
-    X_df = X_df.copy()
-    X_df["MenuItem_freq"] = X_df["MenuItem"].map(menu_item_freq).fillna(0)
-    return X_df[["MenuItem_freq"]]
+    try:
+        menu_item_freq = joblib.load("menu_item_freq.pkl")
+        X_df = X_df.copy()
+        X_df["MenuItem_freq"] = X_df["MenuItem"].map(menu_item_freq).fillna(0)
+        return X_df[["MenuItem_freq"]]
+    except FileNotFoundError:
+        # kalau file tidak ada, kembalikan DataFrame kosong
+        return pd.DataFrame({"MenuItem_freq": [0]*len(X_df)})
 
 # ======================================
 # LOAD ARTIFACTS
@@ -78,16 +96,16 @@ with st.container():
         with st.form("prediction_form", border=False):
             st.subheader("📝 Menu Information")
 
-            restaurant_id = st.text_input("**Restaurant ID**", "R003")
-            menu_category = st.selectbox("**Menu Category**", ['Desserts', 'Main Course', 'Appetizers', 'Beverages', 'Salads'])
-            menu_item = st.text_input("**Menu Item Name**", "Newyork Cheesecake")
-            price = st.number_input("**Price ($)**", min_value=0.0, value=18.66, step=0.01, format="%.2f")
-            ingredients = st.text_area("**Ingredients**", "Chocolate Butter Sugar Eggs")
+            restaurant_id = st.text_input("**Restaurant ID**", "")
+            menu_category = st.text_input("**Menu Category**", "")
+            menu_item = st.text_input("**Menu Item Name**", "")
+            price = st.number_input("**Price ($)**", min_value=0.0, step=0.01, format="%.2f")
+            ingredients = st.text_area("**Ingredients**", "")
 
             submit_button = st.form_submit_button("✨ Predict Profitability", use_container_width=True)
 
     with col2:
-        st.subheader("🤮 Prediction Results")
+        st.subheader("🔮 Prediction Results")
 
         if submit_button:
             input_data = pd.DataFrame([{
@@ -114,10 +132,10 @@ with st.container():
             else:
                 st.error("This menu item may not be very profitable. ⚠️")
 
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Prediction Confidence", "92%", "3% from average")
-            col2.metric("Recommended Price", f"${price*1.1:.2f}", "+10%")
-            col3.metric("Similar Profitable Items", "24", "In your database")
+            col_m1, col_m2, col_m3 = st.columns(3)
+            col_m1.metric("Prediction Confidence", "92%", "3% from average")
+            col_m2.metric("Recommended Price", f"${price*1.1:.2f}", "+10%")
+            col_m3.metric("Similar Profitable Items", "24", "In your database")
 
             st.markdown("### Profitability Insights")
             tab1, tab2, tab3 = st.tabs(["📈 Trend", "🍽️ Similar Items", "💡 Suggestions"])
@@ -131,7 +149,7 @@ with st.container():
                 }))
             with tab3:
                 st.success("""
-                - Promote this item as a signature dessert
+                - Promote this item as a signature dish
                 - Bundle with coffee for 15% higher margin
                 - Higher demand observed in winter
                 """)
